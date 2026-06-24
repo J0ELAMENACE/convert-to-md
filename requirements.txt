@@ -1,0 +1,7 @@
+pdfplumber
+mammoth
+python-pptx
+openpyxl
+beautifulsoup4
+pytesseract
+Pillow

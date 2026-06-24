@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.8", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Tesseract (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y tesseract-ocr
+
+      - name: Install Tesseract (Windows)
+        if: runner.os == 'Windows'
+        run: choco install tesseract --no-progress -y
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Syntax check
+        run: python -c "import ast; ast.parse(open('convert.py').read()); print('AST OK')"
+
+      - name: Run smoke tests
+        run: python -m pytest tests/ -v
+        if: hashFiles('tests/') != ''
+
+      - name: Smoke test (inline)
+        run: |
+          python -c "
+          import sys, pathlib, tempfile, io, json
+          sys.argv = ['x']
+          import convert
+          convert.ensure_output_dir()
+
+          t = pathlib.Path(tempfile.mktemp(suffix='.txt'))
+          t.write_text('hello world')
+          convert.convert_file(str(t))
+          out = convert.OUTPUT_DIR / (t.stem + '_txt.md')
+          assert out.exists() and out.read_text() == 'hello world'
+          t.unlink(); out.unlink()
+          print('Smoke test PASS')
+          "
