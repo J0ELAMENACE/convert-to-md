@@ -5,3 +5,5 @@ openpyxl
 beautifulsoup4
 pytesseract
 Pillow
+
+pytest
